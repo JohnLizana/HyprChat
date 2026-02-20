@@ -1,0 +1,869 @@
+/* --- VARIABLES DE COLOR (CATPPUCCIN MOCHA) --- */
+/* --- IMPORTACIÓN DE FUENTE (Añade esto al principio) --- */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Rajdhani:wght@400;700&family=Orbitron:wght@400;700&family=Michroma&family=Share+Tech+Mono&display=swap');
+
+/* --- VARIABLES DE COLOR (CATPPUCCIN MOCHA) --- */
+:root {
+  --bg-color: rgba(17, 17, 27, 0.95); /* Un poco más opaco para Windows */
+  --border-color: #cba6f7;
+  --text-main: #cdd6f4;
+  --text-dim: #6c7086;
+  --accent: #ffffff;
+  --error: #f38ba8;
+  --gap: 12px;
+  --main-font: 'JetBrains Mono', monospace; /* Variable que controlará todo */
+  --text-main: #cdd6f4;
+}
+
+/* --- CLASE CRÍTICA PARA TAURI --- */
+.hidden {
+  display: none !important;
+}
+
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+  /* Agregamos fuentes de respaldo por si falla Google Fonts en el .exe */
+  font-family: 'JetBrains Mono', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+  font-family: var(--main-font) !important; 
+
+}
+
+body {
+  height: 100vh;
+  width: 100vw;
+  background-color: #000;
+  padding: var(--gap);
+  display: flex;
+  flex-direction: column; /* Cambiado a columna para mejor control */
+  overflow: hidden;
+}
+
+/* Ajuste para que el login o el chat ocupen todo el espacio disponible */
+#login-screen, #main-app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- FRAME ESTILO HYPRLAND --- */
+.window-frame {
+  flex: 1;
+  background: var(--bg-color);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 15px rgba(203, 166, 247, 0.3);
+  overflow: hidden; /* Importante para que el contenido no se salga */
+}
+
+/* --- RESTO DE TU CSS (He mantenido tu lógica intacta) --- */
+.bar {
+  height: 45px;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  border-bottom: 1px solid rgba(203, 166, 247, 0.2);
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--border-color);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--border-color);
+}
+
+.title { color: var(--border-color); font-size: 0.8rem; margin-left: 12px; font-weight: bold; }
+.main-layout { flex: 1; display: flex; overflow: hidden; }
+
+/* Sidebar corrección para Windows */
+.sidebar {
+  width: 220px;
+  background: rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0; /* Evita que se colapse en Windows */
+}
+
+/* Chat area corrección */
+.chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Login screen corrección */
+.login-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%; /* Asegura que ocupe todo el ancho del frame */
+}
+
+.sidebar-label { color: var(--text-dim); font-size: 0.7rem; padding: 20px 15px 10px; letter-spacing: 2px; }
+
+#rooms-list { list-style: none; flex: 1; overflow-y: auto; }
+
+.room-item {
+  padding: 10px 20px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: 0.2s;
+  display: block;
+  display: list-item;
+}
+
+.room-item:hover { color: var(--accent); background: rgba(255,255,255,0.05); }
+
+.room-item.active {
+  color: var(--border-color);
+  background: rgba(203, 166, 247, 0.1);
+  border-left: 4px solid var(--border-color);
+}
+
+/* --- TU BOTÓN ACTUAL (Mejorado para el intercambio) --- */
+#add-room-btn {
+  margin: 15px;
+  width: calc(100% - 30px); /* Ocupa el ancho restando los márgenes */
+  background: transparent;
+  border: 1px dashed var(--text-dim);
+  color: var(--text-dim);
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: block; /* Asegura que sea un bloque para que el margen funcione bien */
+}
+
+#add-room-btn:hover { 
+  border-color: var(--border-color); 
+  color: var(--border-color); 
+}
+
+/* --- EL CONTENEDOR DEL INPUT (Debe ser idéntico al botón) --- */
+#new-room-container {
+  margin: 15px;
+  width: calc(100% - 30px);
+}
+
+#new-room-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+  box-shadow: 0 0 10px rgba(203, 166, 247, 0.2);
+}
+
+/* --- CHAT AREA --- */
+.chat-area { flex: 1; display: flex; flex-direction: column; background: transparent; }
+
+#chat-box {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior:auto;
+}
+
+/* Estilo de Mensajes tipo Terminal */
+.message { font-size: 0.9rem; line-height: 1.4; color: var(--text-main); }
+.message .time { color: var(--text-dim); margin-right: 10px; }
+.message .user { color: var(--accent); font-weight: bold; }
+
+/* --- INPUT AREA --- */
+.input-area { padding: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+
+#message-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--text-dim);
+  padding: 12px;
+  color: var(--text-main);
+  outline: none;
+  border-radius: 4px;
+}
+
+#message-input:focus { border-color: var(--border-color); box-shadow: 0 0 10px rgba(203, 166, 247, 0.2); }
+
+/* --- LOGIN SCREEN --- */
+.login-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+.ascii-logo { font-size: 2.2rem; color: var(--border-color); margin-bottom: 40px; text-shadow: 0 0 15px var(--border-color); font-weight: bold; }
+
+.input-group { margin-bottom: 15px; width: 320px; }
+.input-group label { display: block; color: var(--text-dim); font-size: 0.7rem; margin-bottom: 6px; }
+.input-group input { 
+    width: 100%; 
+    background: rgba(0,0,0,0.5); 
+    border: 1px solid var(--text-dim); 
+    padding: 12px; 
+    color: #fff; 
+    border-radius: 4px;
+}
+
+#login-btn {
+  margin-top: 10px;
+  width: 320px;
+  padding: 15px;
+  background: var(--border-color);
+  color: #11111b;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--border-color);
+  border-radius: 4px;
+}
+
+#login-btn:hover { opacity: 0.9; transform: scale(1.02); }
+
+/* SCROLLBARS */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 10px; }
+.room-item.active {
+  color: #ffffff; /* Blanco puro para resaltar */
+  background: rgba(203, 166, 247, 0.25); /* Fondo lila más opaco */
+  border-left: 4px solid var(--border-color);
+  font-weight: bold;
+  /* Efecto de resplandor neón en el texto */
+  text-shadow: 0 0 8px var(--border-color);
+  /* Un pequeño borde interno para dar profundidad */
+  box-shadow: inset 0 0 10px rgba(203, 166, 247, 0.1);
+}
+
+.room-item {
+  padding: 12px 20px;
+  color: var(--text-dim); /* Los canales no activos se ven más apagados */
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.room-item:hover:not(.active) {
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.05);
+  padding-left: 25px; /* Pequeña animación de desplazamiento al pasar el mouse */
+}
+#message-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--text-dim);
+  padding: 14px;
+  color: var(--accent); /* Color magenta claro al escribir */
+  outline: none;
+  border-radius: 6px;
+  caret-color: var(--border-color); /* El cursor parpadeante es lila */
+  transition: 0.3s;
+}
+
+#message-input:focus {
+  border-color: var(--border-color);
+  box-shadow: 0 0 15px rgba(203, 166, 247, 0.2);
+}
+#add-room-btn {
+  margin: 10px 15px;
+  background: rgba(203, 166, 247, 0.05);
+  border: 1px dashed var(--border-color);
+  color: var(--border-color);
+  padding: 8px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  transition: 0.3s;
+  text-transform: uppercase;
+}
+
+#add-room-btn:hover {
+  background: var(--border-color);
+  color: #11111b;
+  box-shadow: 0 0 10px var(--border-color);
+}
+/* --- CONTROLES DEL HEADER --- */
+.header-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* --- ESTILO DEL BOTÓN EXIT --- */
+#logout-btn {
+    background: transparent;
+    border: 1px solid #f38ba8; /* Color rojizo/flamingo */
+    color: #f38ba8;
+    padding: 5px 15px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#logout-btn:hover {
+    background: rgba(243, 139, 168, 0.1);
+    box-shadow: 0 0 12px rgba(243, 139, 168, 0.4);
+    transform: translateY(-1px);
+}
+
+.color-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.color-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+.color-preview-wrapper {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+
+/* Ocultamos el input real pero lo dejamos encima para que sea clickable */
+#color-picker {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    z-index: 2;
+}
+#color-visual-box {
+    width: 100%;
+    height: 100%;
+    background-color: var(--border-color); /* Se actualiza por JS */
+    border: 2px solid #fff;
+    border-radius: 3px;
+    box-shadow: 0 0 8px var(--border-color);
+    z-index: 1;
+    transition: transform 0.2s;
+}
+
+.color-preview-wrapper:hover #color-visual-box {
+    transform: scale(1.1);
+}
+/* Fuerza la visibilidad en el motor nativo de Tauri */
+#rooms-list {
+    display: block !important; /* Cambiamos de flex a block para evitar colapsos */
+    width: 100%;
+    height: auto;
+    min-height: 20px;
+    overflow-y: visible; /* Cambiamos temporalmente a visible para debug */
+}
+
+.room-item {
+    display: block !important;
+    width: 100%;
+    padding: 12px 20px !important;
+    background: rgba(255, 255, 255, 0.02); /* Un fondo ligero para ver si aparece */
+    color: #cdd6f4 !important;
+    border-left: 3px solid transparent;
+    margin-bottom: 2px;
+    box-sizing: border-box;
+}
+
+.room-item.active {
+    background: rgba(203, 166, 247, 0.1) !important;
+    border-left: 3px solid var(--border-color) !important;
+    color: #ffffff !important;
+}
+#new-room-input {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    outline: none;
+    border-radius: 4px;
+    box-shadow: 0 0 5px var(--border-color);
+}
+
+/* Asegurar que el botón se vea bien */
+#add-room-btn {
+    width: calc(100% - 30px);
+    margin: 10px 15px;
+    background: transparent;
+    border: 1px dashed var(--border-color);
+    color: var(--border-color);
+    padding: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+/* --- Estilos del Modal Corregidos --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    display: none; /* JS lo cambiará a 'flex' */
+    align-items: center; 
+    justify-content: center;
+    z-index: 11000; /* Siempre por encima del menú contextual */
+    backdrop-filter: blur(4px);
+}
+.modal-overlay.hidden {
+    display: none !important;
+}
+
+.modal-content {
+    background: #11111b; 
+    border: 2px solid var(--border-color);
+    padding: 30px;
+    width: 350px;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 15px var(--border-color);
+    color: #cdd6f4;
+    border-radius: 10px;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    color: var(--border-color); /* El título usa el color neón actual */
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+}
+
+.modal-content p {
+    color: #a6adc8; /* Texto secundario gris claro para que se lea bien */
+    margin: 15px 0;
+    font-size: 0.9rem;
+}
+
+.modal-buttons {
+    display: flex; 
+    justify-content: space-between; 
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.modal-buttons button {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: white; /* ASEGURA LETRAS BLANCAS EN BOTONES */
+    padding: 10px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.modal-buttons button:hover {
+    background: var(--border-color);
+    color: #11111b; /* Texto oscuro al pasar el ratón para contraste */
+}
+
+/* Estilo especial para el botón de eliminar */
+.modal-buttons button.danger {
+    border-color: #f38ba8;
+    color: #f38ba8;
+}
+
+.modal-buttons button.danger:hover {
+    background: #f38ba8;
+    color: #11111b;
+}
+.date-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: var(--text-dim); /* O un color grisáceo */
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    opacity: 0.6;
+}
+
+.date-divider::before,
+.date-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px dashed var(--text-dim);
+}
+
+.date-divider:not(:empty)::before {
+    margin-right: .5em;
+}
+
+.date-divider:not(:empty)::after {
+    margin-left: .5em;
+}
+
+/* Botón de Icono */
+.icon-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--border-color);
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+    border-radius: 4px;
+}
+
+.icon-btn:hover {
+    background: var(--border-color);
+    color: #11111b; /* Color de fondo oscuro */
+    box-shadow: 0 0 10px var(--border-color);
+}
+
+/* Panel Flotante */
+#settings-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    width: 300px;
+    background: #1e1e2e; /* Fondo oscuro */
+    border: 2px solid var(--border-color);
+}
+
+.window-header {
+    background: var(--border-color);
+    color: #11111b;
+    padding: 5px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.close-x {
+    background: transparent;
+    border: none;
+    color: #11111b;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.settings-content {
+    padding: 20px;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+}
+
+.setting-item label {
+    display: block;
+    font-size: 0.7rem;
+    margin-bottom: 10px;
+    color: var(--text-dim);
+}
+
+/* Estilo Danger para borrar */
+.danger-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid #f38ba8; /* Color rojo */
+    color: #f38ba8;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 0.7rem;
+}
+
+.danger-btn:hover {
+    background: #f38ba8;
+    color: #11111b;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Asegura que los inputs y botones también la hereden (a veces no lo hacen por defecto) */
+input, button, select, textarea {
+  font-family: var(--main-font) !important;
+}
+.message .text {
+    color: var(--text-main) !important;
+}
+.chat-link {
+    color: var(--accent);
+    text-decoration: underline;
+    opacity: 0.8;
+}
+.chat-link:hover { opacity: 1; text-shadow: var(--glow); }
+
+.chat-link {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.chat-link:hover {
+    opacity: 1;
+    text-shadow: var(--glow);
+}
+
+/* Opcional: Resaltado para DMs */
+.dm-highlight {
+    background: rgba(255, 255, 255, 0.03);
+    border-right: 2px solid var(--accent);
+}
+/* Pestañas de DM en el sidebar */
+.dm-room {
+    border-left: 3px solid var(--accent) !important;
+    font-style: italic;
+    color: var(--accent) !important;
+}
+
+.status-dot-mini {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 8px;
+    box-shadow: 0 0 5px var(--accent);
+}
+
+/* Contenedor de la imagen */
+.chat-image-container {
+    margin: 8px 0;
+    max-width: 100%;
+}
+
+/* La imagen en sí */
+.chat-inline-img {
+    max-width: 300px;         /* Ancho máximo para no saturar el chat */
+    max-height: 200px;        /* Altura máxima */
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    display: block;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: zoom-in;
+}
+
+.chat-inline-img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 15px var(--border-color);
+}
+
+/* Estilo para links normales (por si no lo tenías) */
+.chat-link {
+    color: var(--accent);
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+.context-menu {
+    position: fixed;
+    z-index: 10000;
+    background: #1e1e2e; /* Color sólido Catppuccin */
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+    min-width: 160px;
+    padding: 5px 0;
+    pointer-events: auto !important; /* Asegura que detecte el ratón */
+}
+
+.context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.context-menu li {
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+}
+
+.context-menu li:hover {
+    background: var(--border-color);
+    color: var(--bg-dark);
+}
+
+.context-menu li.danger:hover {
+    background: #f38ba8;
+    color: #11111b;
+}
+
+.hidden { display: none !important; }
+#delete-modal {
+    z-index: 10001 !important; /* Un nivel más arriba que el menú contextual */
+}
+
+.modal-input {
+    width: 100%;
+    padding: 12px;
+    margin: 15px 0;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    color: white;
+    border-radius: 4px;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+}
+/* --- 4. BOTONES DEL MODAL --- */
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.modal-buttons button {
+    flex: 1;
+    padding: 10px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: white;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+.modal-buttons button:hover {
+    background: var(--border-color);
+    color: #11111b;
+}
+
+.modal-buttons button.danger {
+    border-color: #f38ba8;
+    color: #f38ba8;
+}
+
+.modal-buttons button.danger:hover {
+    background: #f38ba8;
+    color: #11111b;
+}
+.accent {
+    background: var(--border-color) !important;
+    color: var(--bg-dark) !important;
+}
+
+
+#boot-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #0b0b10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* --- ANIMACIÓN GLITCH --- */
+.glitch-container {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.glitch-img {
+    width: 120px;
+    filter: drop-shadow(0 0 10px var(--border-color));
+}
+
+.glitch-layers {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 5rem; font-weight: bold; color: white;
+    opacity: 0.5;
+}
+
+.glitch-layers span {
+    position: absolute;
+    animation: glitch-anim 2s infinite linear alternate-reverse;
+}
+
+.glitch-layers span:nth-child(2) {
+    color: #f38ba8; /* Rojo Glitch */
+    left: 2px; text-shadow: -2px 0 #ff00c1;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim-2 1s infinite linear alternate-reverse;
+}
+
+.glitch-layers span:nth-child(3) {
+    color: #89b4fa; /* Azul Glitch */
+    left: -2px; text-shadow: 2px 0 #00fff9;
+    clip: rect(100px, 450px, 120px, 0);
+    animation: glitch-anim 1.5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+    0% { clip: rect(31px, 9999px, 94px, 0); transform: skew(0.85deg); }
+    20% { clip: rect(62px, 9999px, 42px, 0); transform: skew(0.12deg); }
+    100% { clip: rect(81px, 9999px, 5px, 0); transform: skew(0.51deg); }
+}
+
+@keyframes glitch-anim-2 {
+    0% { clip: rect(65px, 9999px, 100px, 0); transform: skew(0.2deg); }
+    100% { clip: rect(10px, 9999px, 30px, 0); transform: skew(0.9deg); }
+}
+
+/* --- TERMINAL TEXT --- */
+.terminal-loader {
+    width: 400px;
+    height: 100px;
+    color: #a6adc8;
+    font-size: 0.8rem;
+    overflow: hidden;
+}
+
+#terminal-text {
+    line-height: 1.4;
+}
+
+.terminal-line { margin-bottom: 4px; }
+.ok { color: #a6e3a1; font-weight: bold; } /* Verde Catppuccin */
+
+.cursor {
+    display: inline-block;
+    width: 8px;
+    height: 15px;
+    background: var(--border-color);
+    animation: blink 0.6s infinite;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+/* --- BARRA DE PROGRESO --- */
+.progress-wrapper {
+    width: 300px;
+    height: 2px;
+    background: rgba(255,255,255,0.05);
+    margin-top: 20px;
+}
+
+.progress-bar {
+    width: 0%; height: 100%;
+    background: var(--border-color);
+    box-shadow: 0 0 10px var(--border-color);
+    transition: width 0.3s ease;
+}
+
+.boot-exit {
+    opacity: 0;
+    filter: blur(20px) scale(1.1);
+    transition: all 1s ease;
+    pointer-events: none;
+}

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hypr-Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+   <style>
+    /* 1. Fondo negro inmediato para evitar destellos blancos */
+    body { 
+        background-color: #000 !important; 
+        margin: 0; 
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 2. OCULTAR TODO EXCEPTO EL LOGIN AL ARRANCAR */
+    #chat-container { 
+        display: none !important; 
+    }
+    
+    /* Los modales se ocultan con la clase .hidden, sin !important */
+    .modal-overlay {
+        display: none;
+    }
+
+    /* 3. El login debe ser lo único visible */
+    #login-screen { 
+        display: flex !important; 
+    }
+
+    /* 4. Clase auxiliar para el JavaScript */
+    .hidden { 
+        display: none !important; 
+    }
+    .texto-blanco {
+        color: white;
+    }
+    </style>
+</head>
+<body>
+    <div id="boot-screen">
+        <div class="glitch-container">
+            <img src="/src/assets/logo-chat.png" id="boot-logo" class="glitch-img">
+            <div class="glitch-layers">
+            </div>
+        </div>
+        
+        <div class="terminal-loader">
+            <div id="terminal-text"></div>
+            <div class="cursor">_</div>
+        </div>
+
+        <div class="progress-wrapper">
+            <div class="progress-bar"></div>
+        </div>
+    </div>
+    <div id="login-screen" class="window-frame">
+        <div class="login-content">
+            <span class="ascii-logo"> #HYPRCHAT</span>
+            <div class="input-group">
+                <label>USER@TERMINAL</label>
+                <input id="username-input" type="text" placeholder="...">
+            </div>
+            <div class="input-group">
+                <label>ACCESS_KEY</label>
+                <input id="password-input" type="password" placeholder="••••••••">
+            </div>
+            
+            <div class="input-group">
+                <label>REMOTE_HOST</label>
+                <input id="server-ip" type="text" value="" list="saved-hosts" autocomplete="off">
+                <datalist id="saved-hosts"></datalist>
+            </div>
+            
+            <div class="input-group">
+                <label>HOST_ALIAS (Opt)</label>
+                <input id="server-alias" type="text" placeholder="Ej: Servidor Proyectos...">
+            </div>
+            
+            <button id="login-btn">EXECUTE_LOGIN</button>
+        </div>
+    </div>
+
+    <div id="chat-container" class="window-frame">
+        <header class="bar">
+            <div class="status-dot"></div>
+            <span class="title">HYPR-CHAT — <span id="current-room-display">general</span></span>
+            
+            <div class="header-controls">
+                <button id="open-settings-btn" class="icon-btn" title="Ajustes de Sistema">
+                    ⚙
+                </button>
+                
+                <button id="logout-btn" title="Terminar Sesión">#TERMINATE_SESSION</button>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <aside class="sidebar">
+                <div class="sidebar-label">CANALES</div>
+                <ul id="rooms-list">
+                    </ul>
+
+                <button id="add-room-btn">+ NUEVA SALA</button>
+
+                <div id="new-room-container" class="hidden">
+                    <input id="new-room-input" type="text" placeholder="nombre-sala...">
+                </div>
+            </aside>
+
+            <section class="chat-area">
+                <div id="chat-box"></div>
+                <div class="input-area">
+                    <input id="message-input" type="text" placeholder="Escribir comando..." autocomplete="off">
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="delete-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 id="modal-title">¿ELIMINAR SALA?</h3>
+            <p id="modal-text">Esta acción borrará el historial permanentemente.</p>
+            <div class="modal-buttons">
+                <button id="confirm-delete-btn" class="danger">ELIMINAR</button>
+                <button id="cancel-delete-btn">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+    <div id="custom-context-menu" class="context-menu hidden">
+        <ul>
+            <li class="texto-blanco" id="menu-edit"><span class="icon">✏️</span> Editar Alias</li>
+            <li class="texto-blanco" id="menu-delete" class="danger"><span class="icon">❌</span> Eliminar Sala</li>
+        </ul>
+    </div>
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>EDITAR ALIAS</h3>
+            <p>Introduce el nuevo nombre para la sala:</p>
+            <input type="text" id="edit-room-input" class="modal-input">
+            <div class="modal-buttons">
+                <button id="confirm-edit-btn" class="accent">GUARDAR</button>
+                <button id="cancel-edit-btn">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <div id="settings-panel" class="window-frame hidden shadow-lg">
+        <div class="window-header">
+            <span>SYSTEM_SETTINGS.EXE</span>
+            <button id="close-settings" class="close-x">X</button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-item">
+                <label>COLOR_ACENTO (Bordes)</label>
+                <div class="color-row">
+                    <input type="color" id="settings-color-picker">
+                    <span id="color-hex-code">#CBA6F7</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>FONDO_CHAT</label>
+                <div class="color-row">
+                    <input type="color" id="bg-color-picker">
+                    <span id="bg-hex-code">#1E1E2E</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>COLOR_TEXTO_CHAT</label>
+                <div class="color-row">
+                    <input type="color" id="text-color-picker">
+                    <span id="text-hex-code">#CDD6F4</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>TIPOGRAFÍA</label>
+                <select id="font-family-select">
+                    <option value="-apple-system, 'SF Pro Text', sans-serif">SF Pro Text</option>
+                    <option value="'Roboto', sans-serif">Roboto</option>
+                    <option value="'Cantarell', sans-serif">Cantarell</option>
+                    <option value="'Rajdhani', sans-serif">Rajdhani</option>
+                    <option value="'Orbitron', sans-serif">Orbitron</option>
+                    <option value="'Michroma', sans-serif">Michroma</option>
+                    <option value="'Share Tech Mono', monospace">Share Tech Mono</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+
+    
+    <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
