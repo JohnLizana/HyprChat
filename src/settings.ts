@@ -81,6 +81,67 @@ export function initSettings() {
 
         loadPrefs();
 
+        // --- WALLPAPER ---
+        const appBg = document.getElementById('app-background');
+        const presetItems = document.querySelectorAll('.bg-preset-item');
+        const customBgInput = document.getElementById('custom-bg-url') as HTMLInputElement;
+
+        const applyWallpaper = (url: string) => {
+            if (appBg) {
+                if (url) {
+                    appBg.style.backgroundImage = `url(${url})`;
+                    appBg.style.opacity = '0.45';
+                    document.body.classList.add('wallpaper-active');
+                } else {
+                    appBg.style.backgroundImage = 'none';
+                    appBg.style.opacity = '0';
+                    document.body.classList.remove('wallpaper-active');
+                }
+            }
+            localStorage.setItem('hypr_wallpaper', url);
+            presetItems.forEach(item => {
+                const el = item as HTMLElement;
+                el.classList.toggle('active', el.dataset.bg === url);
+            });
+        };
+
+        // Set thumbnails on preset items
+        presetItems.forEach(item => {
+            const el = item as HTMLElement;
+            const bgUrl = el.dataset.bg;
+            if (bgUrl) {
+                el.style.backgroundImage = `url(${bgUrl})`;
+            }
+        });
+
+        // Click on preset
+        presetItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const url = (item as HTMLElement).dataset.bg || '';
+                applyWallpaper(url);
+                if (customBgInput) customBgInput.value = url;
+            });
+        });
+
+        // Custom URL button
+        document.getElementById('apply-custom-bg')?.addEventListener('click', () => {
+            const url = customBgInput?.value.trim() || '';
+            if (url) applyWallpaper(url);
+        });
+
+        // Remove background button
+        document.getElementById('remove-bg-btn')?.addEventListener('click', () => {
+            applyWallpaper('');
+            if (customBgInput) customBgInput.value = '';
+        });
+
+        // Load saved wallpaper
+        const savedWallpaper = localStorage.getItem('hypr_wallpaper') || '';
+        if (savedWallpaper) {
+            applyWallpaper(savedWallpaper);
+            if (customBgInput) customBgInput.value = savedWallpaper;
+        }
+
     } catch (error) {
         console.error("Error crítico en initSettings:", error);
     }

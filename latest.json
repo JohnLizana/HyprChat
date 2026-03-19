@@ -1,0 +1,11 @@
+{
+  "version": "0.1.2",
+  "notes": "Nueva versión disponible",
+  "pub_date": "2025-01-01T00:00:00Z",
+  "platforms": {
+    "darwin-universal": {
+      "url": "https://github.com/JohnLizana/HyprChat/releases/download/v0.1.2/HyprChat_0.1.2_universal.dmg",
+      "signature": ""
+    }
+  }
+}

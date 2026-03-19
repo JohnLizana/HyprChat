@@ -40,6 +40,7 @@
     </style>
 </head>
 <body>
+    <div id="app-background"></div>
     <div id="boot-screen">
         <div class="glitch-container">
             <img src="/src/assets/logo-chat.png" id="boot-logo" class="glitch-img">
@@ -107,6 +108,7 @@
 
                 <div id="new-room-container" class="hidden">
                     <input id="new-room-input" type="text" placeholder="nombre-sala...">
+                    <input id="new-room-pass" type="password" placeholder="clave (opcional)..." style="margin-top: 5px; width: 100%; box-sizing: border-box;">
                 </div>
             </aside>
 
@@ -132,7 +134,8 @@
     <div id="custom-context-menu" class="context-menu hidden">
         <ul>
             <li class="texto-blanco" id="menu-edit"><span class="icon">✏️</span> Editar Alias</li>
-            <li class="texto-blanco" id="menu-delete" class="danger"><span class="icon">❌</span> Eliminar Sala</li>
+            <li class="texto-blanco" id="menu-password"><span class="icon">🔑</span> Cambiar Pass</li>
+            <li class="texto-blanco danger" id="menu-delete"><span class="icon">❌</span> Eliminar Sala</li>
         </ul>
     </div>
     <div id="edit-modal" class="modal-overlay hidden">
@@ -143,6 +146,28 @@
             <div class="modal-buttons">
                 <button id="confirm-edit-btn" class="accent">GUARDAR</button>
                 <button id="cancel-edit-btn">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+    <div id="password-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>CAMBIAR CONTRASEÑA (ADMIN)</h3>
+            <p>Introduce la nueva contraseña (vacío para quitar):</p>
+            <input type="password" id="room-password-input" class="modal-input">
+            <div class="modal-buttons">
+                <button id="confirm-pass-btn" class="accent">GUARDAR</button>
+                <button id="cancel-pass-btn">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+    <div id="join-password-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>SALA PROTEGIDA</h3>
+            <p id="join-pass-text">Esta sala requiere contraseña:</p>
+            <input type="password" id="join-room-password-input" class="modal-input">
+            <div class="modal-buttons">
+                <button id="confirm-join-pass-btn" class="accent">ENTRAR</button>
+                <button id="cancel-join-pass-btn">CANCELAR</button>
             </div>
         </div>
     </div>
@@ -177,6 +202,23 @@
                     <input type="color" id="text-color-picker">
                     <span id="text-hex-code">#CDD6F4</span>
                 </div>
+            </div>
+
+            <div class="setting-item">
+                <label>FONDO_IMAGEN</label>
+                <div class="bg-presets">
+                    <div class="bg-preset-item active" data-bg="" title="Sin fondo">
+                        <span style="font-size:1.2rem;">✕</span>
+                    </div>
+                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1920&q=80" title="Neon City"></div>
+                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80" title="Earth Night"></div>
+                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80" title="Mountains"></div>
+                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1920&q=80" title="Nebula"></div>
+                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1550684376-efcbd6e3f031?w=1920&q=80" title="Purple Smoke"></div>
+                </div>
+                <input type="text" id="custom-bg-url" placeholder="URL de imagen personalizada..." class="modal-input" style="margin-top:8px;font-size:0.7rem;padding:8px;">
+                <button id="apply-custom-bg" style="width:100%;margin-top:5px;padding:6px;background:transparent;border:1px solid var(--border-color);color:var(--border-color);cursor:pointer;font-size:0.7rem;transition:0.2s;">APLICAR URL</button>
+                <button id="remove-bg-btn" style="width:100%;margin-top:5px;padding:6px;background:transparent;border:1px solid #f38ba8;color:#f38ba8;cursor:pointer;font-size:0.7rem;transition:0.2s;">QUITAR FONDO</button>
             </div>
 
             <div class="setting-item">
