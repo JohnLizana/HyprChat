@@ -29,7 +29,7 @@
     padding: 0;
     /* Agregamos fuentes de respaldo por si falla Google Fonts en el .exe */
     font-family: 'JetBrains Mono', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-family: var(--main-font) !important;
+    font-family: var(--main-font);
 
 }
 
@@ -83,13 +83,13 @@ body.wallpaper-active #settings-panel {
 
 /* Ajuste para que el login o el chat ocupen todo el espacio disponible */
 #login-screen,
-#main-app {
+#chat-container {
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 /* --- FRAME ESTILO HYPRLAND --- */
@@ -103,7 +103,7 @@ body.wallpaper-active #settings-panel {
     box-shadow: 0 0 15px rgba(203, 166, 247, 0.3);
     overflow: hidden;
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 /* --- RESTO DE TU CSS (He mantenido tu lógica intacta) --- */
@@ -280,6 +280,22 @@ body.wallpaper-active #settings-panel {
 .message .user {
     color: var(--accent);
     font-weight: bold;
+}
+
+/* --- MENCIONES Y ESPECIALES --- */
+.mention {
+    color: var(--border-color);
+    padding: 0 4px;
+    border-radius: 3px;
+    font-weight: bold;
+    border: 1px solid rgba(203, 166, 247, 0.3);
+    text-shadow: 0 0 5px var(--border-color);
+}
+
+.msg-server {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid var(--border-color);
+    padding-left: 10px;
 }
 
 /* --- INPUT AREA --- */
@@ -574,8 +590,8 @@ body.wallpaper-active #settings-panel {
     /* JS lo cambiará a 'flex' */
     align-items: center;
     justify-content: center;
-    z-index: 11000;
-    /* Siempre por encima del menú contextual */
+    z-index: 3000;
+    /* Siempre por encima del menú contextual y settings */
     backdrop-filter: blur(4px);
 }
 
@@ -693,12 +709,13 @@ body.wallpaper-active #settings-panel {
 }
 
 /* Panel Flotante */
-#settings-panel {
+#settings-panel,
+#online-users-panel {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 1000;
+    z-index: 2000;
     width: 300px;
     background: #1e1e2e;
     /* Fondo oscuro */
@@ -754,10 +771,6 @@ body.wallpaper-active #settings-panel {
 .danger-btn:hover {
     background: #f38ba8;
     color: #11111b;
-}
-
-.hidden {
-    display: none !important;
 }
 
 /* Asegura que los inputs y botones también la hereden (a veces no lo hacen por defecto) */
@@ -890,12 +903,8 @@ textarea {
     color: #11111b;
 }
 
-.hidden {
-    display: none !important;
-}
-
 #delete-modal {
-    z-index: 10001 !important;
+    z-index: 3001 !important;
     /* Un nivel más arriba que el menú contextual */
 }
 
@@ -1103,6 +1112,37 @@ textarea {
     pointer-events: none;
 }
 
+/* --- ONLINE INDICATOR (Header Button) --- */
+.online-indicator-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #a6e3a1; /* Green Catppuccin */
+    border-radius: 50%;
+    margin-right: 8px;
+    box-shadow: 0 0 8px #a6e3a1;
+    display: inline-block;
+}
+
+.online-btn-header {
+    display: flex;
+    align-items: center;
+    padding: 0 12px !important;
+    width: auto !important;
+    font-size: 0.75rem !important;
+    color: #ffffff !important;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+#online-count-header {
+    margin-left: 6px;
+    opacity: 0.8;
+}
+
+#online-users-list-modal li {
+    color: #ffffff !important;
+}
+
 /* --- WALLPAPER PRESETS --- */
 .bg-presets {
     display: flex;
@@ -1251,3 +1291,87 @@ textarea {
 #chat-container.chat-enter {
     animation: chatEnter 0.5s ease-out;
 }
+
+/* --- ESTILOS DE DESTACADO Y PRIVADO --- */
+.msg-important {
+    background: rgba(243, 139, 168, 0.15) !important;
+    border-left: 4px solid var(--error);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 4px 0;
+    box-shadow: 0 0 10px rgba(243, 139, 168, 0.2);
+}
+.msg-important .text {
+    font-weight: bold;
+    color: #fff !important;
+    text-shadow: 0 0 5px rgba(243, 139, 168, 0.5);
+}
+.msg-important .user {
+    color: var(--error) !important;
+}
+
+.msg-private {
+    background: rgba(203, 166, 247, 0.1) !important;
+    border-right: 4px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 4px 0;
+    font-style: italic;
+}
+.msg-private .user-private {
+    color: var(--border-color);
+    font-weight: bold;
+    margin-right: 6px;
+}
+
+/* --- ESTILO DE MENCIONES (@) --- */
+.mention {
+    background: rgba(166, 227, 161, 0.2); /* Verde pastel */
+    color: #a6e3a1;
+    font-weight: bold;
+    padding: 2px 4px;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(166, 227, 161, 0.3);
+}
+
+/* --- ONLINE USERS BUTTON & DROPDOWN --- */
+#online-users-btn {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #a6e3a1; /* Green border */
+    color: #a6e3a1;            /* Green text */
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: var(--main-font);
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 5px rgba(166, 227, 161, 0.2);
+}
+
+#online-users-btn:hover {
+    background: rgba(166, 227, 161, 0.15);
+    box-shadow: 0 0 10px rgba(166, 227, 161, 0.4);
+}
+
+/* Clases generadas para hashes de usuarios y evitar CSP restrictions de inline styles */
+.user.user-color-0 { color: #f5e0dc !important; }
+.user.user-color-1 { color: #f2cdcd !important; }
+.user.user-color-2 { color: #f5c2e7 !important; }
+.user.user-color-3 { color: #cba6f7 !important; }
+.user.user-color-4 { color: #f38ba8 !important; }
+.user.user-color-5 { color: #eba0ac !important; }
+.user.user-color-6 { color: #fab387 !important; }
+.user.user-color-7 { color: #f9e2af !important; }
+.user.user-color-8 { color: #a6e3a1 !important; }
+.user.user-color-9 { color: #94e2d5 !important; }
+.user.user-color-10 { color: #89dceb !important; }
+.user.user-color-11 { color: #74c7ec !important; }
+.user.user-color-12 { color: #89b4fa !important; }
+.user.user-color-13 { color: #b4befe !important; }
+/* Color de la cuenta propia (Tú) */
+.user.user-color-self { color: var(--border-color) !important; }
+

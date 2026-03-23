@@ -1,53 +1,23 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hypr-Chat</title>
+    <link rel="icon" type="image/png" href="/src/assets/logo.png" />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-   <style>
-    /* 1. Fondo negro inmediato para evitar destellos blancos */
-    body { 
-        background-color: #000 !important; 
-        margin: 0; 
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-
-    /* 2. OCULTAR TODO EXCEPTO EL LOGIN AL ARRANCAR */
-    #chat-container { 
-        display: none !important; 
-    }
-    
-    /* Los modales se ocultan con la clase .hidden, sin !important */
-    .modal-overlay {
-        display: none;
-    }
-
-    /* 3. El login debe ser lo único visible */
-    #login-screen { 
-        display: flex !important; 
-    }
-
-    /* 4. Clase auxiliar para el JavaScript */
-    .hidden { 
-        display: none !important; 
-    }
-    .texto-blanco {
-        color: white;
-    }
-    </style>
 </head>
+
 <body>
     <div id="app-background"></div>
     <div id="boot-screen">
         <div class="glitch-container">
-            <img src="/src/assets/logo-chat.png" id="boot-logo" class="glitch-img">
+            <img src="/src/assets/logo_trans.png" id="boot-logo" class="glitch-img">
             <div class="glitch-layers">
             </div>
         </div>
-        
+
         <div class="terminal-loader">
             <div id="terminal-text"></div>
             <div class="cursor">_</div>
@@ -68,32 +38,36 @@
                 <label>ACCESS_KEY</label>
                 <input id="password-input" type="password" placeholder="••••••••">
             </div>
-            
+
             <div class="input-group">
                 <label>REMOTE_HOST</label>
                 <input id="server-ip" type="text" value="" list="saved-hosts" autocomplete="off">
                 <datalist id="saved-hosts"></datalist>
             </div>
-            
+
             <div class="input-group">
                 <label>HOST_ALIAS (Opt)</label>
                 <input id="server-alias" type="text" placeholder="Ej: Servidor Proyectos...">
             </div>
-            
+
             <button id="login-btn">EXECUTE_LOGIN</button>
         </div>
     </div>
 
-    <div id="chat-container" class="window-frame">
+    <div id="chat-container" class="window-frame hidden">
         <header class="bar">
             <div class="status-dot"></div>
             <span class="title">HYPR-CHAT — <span id="current-room-display">general</span></span>
-            
+
             <div class="header-controls">
-                <button id="open-settings-btn" class="icon-btn" title="Ajustes de Sistema">
-                    ⚙
+                <button id="open-online-btn" class="icon-btn online-btn-header" title="Usuarios Online">
+                    <span class="online-indicator-dot"></span> ONLINE <span id="online-count-header">0</span>
                 </button>
-                
+
+                <button id="open-settings-btn" class="icon-btn online-btn-header" title="Ajustes de Sistema">
+                    SETTINGS
+                </button>
+
                 <button id="logout-btn" title="Terminar Sesión">#TERMINATE_SESSION</button>
             </div>
         </header>
@@ -102,14 +76,16 @@
             <aside class="sidebar">
                 <div class="sidebar-label">CANALES</div>
                 <ul id="rooms-list">
-                    </ul>
+                </ul>
 
                 <button id="add-room-btn">+ NUEVA SALA</button>
 
                 <div id="new-room-container" class="hidden">
                     <input id="new-room-input" type="text" placeholder="nombre-sala...">
-                    <input id="new-room-pass" type="password" placeholder="clave (opcional)..." style="margin-top: 5px; width: 100%; box-sizing: border-box;">
+                    <input id="new-room-pass" type="password" placeholder="clave (opcional)..."
+                        style="margin-top: 5px; width: 100%; box-sizing: border-box;">
                 </div>
+
             </aside>
 
             <section class="chat-area">
@@ -172,7 +148,7 @@
         </div>
     </div>
 
-    
+
 
     <div id="settings-panel" class="window-frame hidden shadow-lg">
         <div class="window-header">
@@ -210,15 +186,37 @@
                     <div class="bg-preset-item active" data-bg="" title="Sin fondo">
                         <span style="font-size:1.2rem;">✕</span>
                     </div>
-                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1920&q=80" title="Neon City"></div>
-                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80" title="Earth Night"></div>
-                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80" title="Mountains"></div>
-                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1920&q=80" title="Nebula"></div>
-                    <div class="bg-preset-item" data-bg="https://images.unsplash.com/photo-1550684376-efcbd6e3f031?w=1920&q=80" title="Purple Smoke"></div>
+                    <div class="bg-preset-item"
+                        data-bg="https://i.pinimg.com/originals/f1/63/11/f16311fd0c32786525f471c685bc516e.gif"
+                        title="City"></div>
+                    <div class="bg-preset-item"
+                        data-bg="https://motionbgs.com/media/1046/emily-in-the-cyberpunk-city.960x540.mp4"
+                        title="CyberPunk"></div>
+                    <div class="bg-preset-item" data-bg="https://wallpaperaccess.com/full/9336992.gif"
+                        title="Your Name"></div>
+                    <div class="bg-preset-item"
+                        data-bg="https://video.squarespace-cdn.com/content/v1/5fe4caeadae61a2f19719512/d5940753-9870-4de8-900a-ce49c4896bcf/thumbnail"
+                        title="Neon Dunes"></div>
+                    <div class="bg-preset-item"
+                        data-bg="https://static1.squarespace.com/static/5fe4caeadae61a2f19719512/t/6696219ad6dcda40f9fa8ab6/1721115042117/16.gif?format=1500w"
+                        title="Code Chill"></div>
+                    <div class="bg-preset-item"
+                        data-bg="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/c83c004e-1370-4756-88e5-4071de797088/dfredg5-0a60e875-646e-4d6c-bb91-73086f012808.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi9jODNjMDA0ZS0xMzcwLTQ3NTYtODhlNS00MDcxZGU3OTcwODgvZGZyZWRnNS0wYTYwZTg3NS02NDZlLTRkNmMtYmI5MS03MzA4NmYwMTI4MDguZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.lnsMUNg7ATclGioenszRTwXXMFgtF4XG1nId-Sn1NcY"
+                        title="Mario"></div>
+                    <div class="bg-preset-item"
+                        data-bg="https://motionbgs.com/media/4462/league-of-legends-star-guardians.960x540.mp4"
+                        title="Star Guardians"></div>
+                    <div class="bg-preset-item" data-bg="https://motionbgs.com/media/43/pixel-koi-pond.960x540.mp4"
+                        title="Pixel Koi Pond"></div>
                 </div>
-                <input type="text" id="custom-bg-url" placeholder="URL de imagen personalizada..." class="modal-input" style="margin-top:8px;font-size:0.7rem;padding:8px;">
-                <button id="apply-custom-bg" style="width:100%;margin-top:5px;padding:6px;background:transparent;border:1px solid var(--border-color);color:var(--border-color);cursor:pointer;font-size:0.7rem;transition:0.2s;">APLICAR URL</button>
-                <button id="remove-bg-btn" style="width:100%;margin-top:5px;padding:6px;background:transparent;border:1px solid #f38ba8;color:#f38ba8;cursor:pointer;font-size:0.7rem;transition:0.2s;">QUITAR FONDO</button>
+                <input type="text" id="custom-bg-url" placeholder="URL de imagen personalizada..." class="modal-input"
+                    style="margin-top:8px;font-size:0.7rem;padding:8px;">
+                <button id="apply-custom-bg"
+                    style="width:100%;margin-top:5px;padding:6px;background:transparent;border:1px solid var(--border-color);color:var(--border-color);cursor:pointer;font-size:0.7rem;transition:0.2s;">APLICAR
+                    URL</button>
+                <button id="remove-bg-btn"
+                    style="width:100%;margin-top:5px;padding:6px;background:transparent;border:1px solid #f38ba8;color:#f38ba8;cursor:pointer;font-size:0.7rem;transition:0.2s;">QUITAR
+                    FONDO</button>
             </div>
 
             <div class="setting-item">
@@ -233,11 +231,29 @@
                     <option value="'Share Tech Mono', monospace">Share Tech Mono</option>
                 </select>
             </div>
+
+        </div>
+    </div>
+
+    <div id="online-users-panel" class="window-frame hidden shadow-lg">
+        <div class="window-header">
+            <span>USUARIOS_ACTIVOS.LOG</span>
+            <button id="close-online" class="close-x">X</button>
+        </div>
+        <div class="settings-content">
+            <div class="sidebar-label" style="margin-bottom: 10px; display: flex; justify-content: space-between;">
+                <span>SESIONES_ACTIVAS</span>
+                <span id="online-count-modal">0</span>
+            </div>
+            <ul id="online-users-list-modal"
+                style="list-style:none; margin:0; padding:0; max-height: 50vh; overflow-y:auto;">
+            </ul>
         </div>
     </div>
 
 
-    
+
     <script type="module" src="./src/main.ts"></script>
 </body>
+
 </html>

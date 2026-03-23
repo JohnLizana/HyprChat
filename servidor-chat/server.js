@@ -5,7 +5,7 @@ const readline = require('readline');
 
 // Configuración Global
 let db;
-let allowRegistration = true; // Por defecto
+let allowRegistration = false; // Por defecto apagado
 let wss;
 
 // Interfaz de consola
@@ -70,8 +70,7 @@ async function init() {
                         if (allowRegistration) {
                             await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [msg.user, msg.password]);
                             user = { username: msg.user };
-                            console.log(`\n[INFO] 🆕 Nuevo usuario registrado: ${msg.user}`);
-                            rl.prompt();
+                            user = { username: msg.user };
                         } else {
                             ws.send(JSON.stringify({ type: 'auth', status: 'error', message: 'Registro cerrado por Admin.' }));
                             return;
@@ -91,6 +90,10 @@ async function init() {
                     }));
                     const rooms = await db.all('SELECT name, password FROM rooms');
                     ws.send(JSON.stringify({ type: 'rooms_list', rooms: rooms.map(r => ({ name: r.name, locked: !!r.password })) }));
+                    
+                    // Broadcast a todos que hay un nuevo usuario online
+                    // Broadcast a todos que hay un nuevo usuario online
+                    broadcastOnlineUsers();
                 }
                 
                 // CHAT Y SALAS (Resumido para ahorrar espacio, funciona igual)
@@ -104,13 +107,9 @@ async function init() {
                 }
                 else if (msg.type === 'join') {
                     try {
-                        console.log(`[JOIN] Usuario ${ws.username} intenta unirse a: ${msg.room}`);
                         const roomInfo = await db.get('SELECT * FROM rooms WHERE name = ?', [msg.room]);
-                        
                         if (roomInfo && roomInfo.password && msg.room !== 'general') {
-                            console.log(`[JOIN] La sala ${msg.room} requiere contraseña.`);
                             if (msg.password !== roomInfo.password) {
-                                console.log(`[JOIN] Contraseña incorrecta o ausente para ${msg.room}`);
                                 ws.send(JSON.stringify({ 
                                     type: 'password_required', 
                                     room: msg.room, 
@@ -118,14 +117,9 @@ async function init() {
                                 }));
                                 return;
                             }
-                            console.log(`[JOIN] Contraseña correcta para ${msg.room}`);
                         }
-
                         ws.room = msg.room;
-                        console.log(`[JOIN] ${ws.username} se unió exitosamente a ${ws.room}`);
-                        
                         const history = await db.all('SELECT * FROM (SELECT user, text, timestamp FROM messages WHERE room = ? ORDER BY timestamp DESC LIMIT 50) ORDER BY timestamp ASC', [ws.room]);                    
-                        console.log(`[JOIN] Enviando historial para ${ws.room} (${history.length} mensajes)`);
                         ws.send(JSON.stringify({ type: 'history', data: history }));
                     } catch (err) {
                         console.error("[JOIN ERROR]", err);
@@ -135,7 +129,6 @@ async function init() {
                 else if (msg.type === 'chat') {
                     const room = ws.room || msg.room;
                     const now = new Date().toISOString();
-                    console.log(`[CHAT] Mensaje de ${ws.username || msg.user} en sala ${room}: ${msg.text.substring(0, 20)}...`);
                     
                     try {
                         await db.run('INSERT INTO messages (room, user, text, timestamp) VALUES (?, ?, ?, ?)', 
@@ -153,6 +146,34 @@ async function init() {
                     } catch (err) {
                         console.error("[CHAT ERROR]", err);
                         ws.send(JSON.stringify({ type: 'error', message: 'Error al enviar mensaje.' }));
+                    }
+                }
+                else if (msg.type === 'private_chat') {
+                    const now = new Date().toISOString();
+                    
+                    try {
+                        const payload = JSON.stringify({ 
+                            type: 'private_chat', 
+                            user: msg.user, 
+                            to: msg.to,
+                            text: msg.text, 
+                            timestamp: now
+                        });
+                        
+                        let sent = false;
+                        wss.clients.forEach(c => { 
+                            if (c.readyState === 1 && (c.username === msg.to || c.username === ws.username)) {
+                                c.send(payload);
+                                if (c.username === msg.to) sent = true;
+                            } 
+                        });
+                        
+                        if (!sent && msg.to !== ws.username) {
+                            ws.send(JSON.stringify({ type: 'error', message: `Usuario ${msg.to} no está conectado.` }));
+                        }
+                    } catch (err) {
+                        console.error("[PRIVATE CHAT ERROR]", err);
+                        ws.send(JSON.stringify({ type: 'error', message: 'Error al enviar mensaje privado.' }));
                     }
                 }
                 else if (msg.type === 'load_more') {
@@ -201,7 +222,6 @@ async function init() {
                         // 2. Borramos todos los mensajes asociados a esa sala (Limpieza)
                         await db.run('DELETE FROM messages WHERE room = ?', [msg.room]);
                         
-                        console.log(`Sala #${msg.room} eliminada de la DB.`);
 
                         // 3. Avisamos a TODOS los clientes conectados para que la quiten de su UI
                         broadcastAll({ 
@@ -230,6 +250,15 @@ async function init() {
                     }
                 }
             } catch (err) { console.error(err); }
+        });
+
+        // Detectar desconexión de usuario
+        ws.on('close', () => {
+            if (ws.username) {
+            if (ws.username) {
+                broadcastOnlineUsers();
+            }
+            }
         });
     });
 
@@ -295,15 +324,14 @@ async function init() {
         13: `${cCian}   ╚═════════════════════════════════╝`,
         15: `${cCian}   ╔════ COMMANDS ═══════════════════╗`,
         16: `${cCian}   ║ ${cBlanco}list      ${cGris}-> List Users       ${cCian}║`,
-        17: `${cCian}   ║ ${cBlanco}online    ${cGris}-> Show Active      ${cCian}║`,
-        18: `${cCian}   ║ ${cBlanco}kick      ${cGris}-> Kick User        ${cCian}║`,
-        19: `${cCian}   ║ ${cBlanco}del       ${cGris}-> Delete & Ban     ${cCian}║`,
-        20: `${cCian}   ║ ${cBlanco}reg       ${cGris}-> Toggle Signups   ${cCian}║`,
-        21: `${cCian}   ║ ${cBlanco}promote   ${cGris}-> Make Admin       ${cCian}║`,
-        22: `${cCian}   ║ ${cBlanco}demote    ${cGris}-> Make User        ${cCian}║`,
-        23: `${cCian}   ║ ${cBlanco}cls       ${cGris}-> Clear Screen     ${cCian}║`,
-        24: `${cCian}   ║ ${cBlanco}exit      ${cGris}-> Shutdown         ${cCian}║`,
-        25: `${cCian}   ╚═════════════════════════════════╝`
+        18: `${cCian}   ║ ${cBlanco}say       ${cGris}-> Send Msg to Room ${cCian}║`,
+        19: `${cCian}   ║ ${cBlanco}kick      ${cGris}-> Kick User        ${cCian}║`,
+        20: `${cCian}   ║ ${cBlanco}del       ${cGris}-> Delete & Ban     ${cCian}║`,
+        21: `${cCian}   ║ ${cBlanco}reg       ${cGris}-> Toggle Signups   ${cCian}║`,
+        22: `${cCian}   ║ ${cBlanco}promote   ${cGris}-> Make Admin       ${cCian}║`,
+        23: `${cCian}   ║ ${cBlanco}demote    ${cGris}-> Make User        ${cCian}║`,
+        24: `${cCian}   ║ ${cBlanco}cls       ${cGris}-> Clear Screen     ${cCian}║`,
+        25: `${cCian}   ║ ${cBlanco}exit      ${cGris}-> Shutdown         ${cCian}║`,
     };
 
     // 3. RENDERIZADO (Mezclar Izquierda + Derecha)
@@ -349,11 +377,6 @@ function startConsoleCLI() {
                 }
                 break;
 
-            case 'online':
-                let onlineUsers = [];
-                wss.clients.forEach(c => { if(c.username) onlineUsers.push(c.username) });
-                console.log("🟢 Conectados:", onlineUsers.length > 0 ? onlineUsers.join(', ') : "Nadie");
-                break;
 
             case 'reg':
                 if (arg === 'on') allowRegistration = true;
@@ -368,6 +391,31 @@ function startConsoleCLI() {
                 // 2. Borrar de DB
                 await db.run('DELETE FROM users WHERE username = ?', [arg]);
                 console.log(`🔥 Usuario ${arg} ELIMINADO de la base de datos.`);
+                break;
+
+            case 'say':
+                if (input.length < 3) {
+                    console.log("⚠️  Uso: say <room> <message>");
+                    break;
+                }
+                const sayRoom = input[1];
+                const sayText = input.slice(2).join(' ');
+                const sayTime = new Date().toISOString();
+                
+                try {
+                    await db.run('INSERT INTO messages (room, user, text, timestamp) VALUES (?, ?, ?, ?)', 
+                        [sayRoom, 'Server', sayText, sayTime]);
+                    
+                    broadcastAll({ 
+                        type: 'chat', 
+                        user: 'Server', 
+                        text: sayText, 
+                        timestamp: sayTime,
+                        room: sayRoom
+                    });
+                } catch (e) {
+                    console.error("❌ Error al enviar mensaje desde consola:", e);
+                }
                 break;
 
             case 'kick':
@@ -412,6 +460,18 @@ function broadcastAll(msg) {
     wss.clients.forEach(c => { if (c.readyState === 1) c.send(payload); });
 }
 
+function broadcastOnlineUsers() {
+    let onlineUsers = [];
+    wss.clients.forEach(c => { 
+        if (c.username && c.readyState === 1) {
+            onlineUsers.push(c.username);
+        }
+    });
+    // Quitamos duplicados por si un usuario tiene varias pestañas
+    onlineUsers = [...new Set(onlineUsers)];
+    broadcastAll({ type: 'online_users', users: onlineUsers });
+}
+
 function broadcastRoom(room, msg) {
     const payload = JSON.stringify(msg);
     wss.clients.forEach(c => { if (c.readyState === 1 && c.room === room) c.send(payload); });
@@ -435,8 +495,12 @@ function kickUser(username) {
             kicked = true;
         }
     });
-    if (kicked) console.log(`🥾 ${username} ha sido expulsado.`);
-    else console.log(`ℹ️  ${username} no estaba conectado.`);
+    if (kicked) {
+        // Log desactivado
+    }
+    else {
+        // Log desactivado
+    }
 }
 
 init().catch(console.error);

@@ -1,7 +1,12 @@
-// main.ts
 import './styles.css';
 import { initSettings } from './settings';
 import { linkify, saveCredentials, getSavedCredentials, scrollToBottom } from './chatUtils.ts';
+import { invoke } from '@tauri-apps/api/core';
+
+// ─── ONLINE USERS LIST ────────────────────────────────────────────────────────
+// La lista ahora vive de forma permanente en el sidebar.
+// La función actualizarListaUsuariosOnline se encarga de llenarla automáticamente.
+// ─────────────────────────────────────────────────────────────────────────────
 
 // --- Interfaces ---
 interface HostEntry { ip: string; alias: string; }
@@ -18,6 +23,18 @@ let oldestTimestamp: string | null = null;
 let isLoadingMore = false;
 let hasMoreMessages = true;
 let unreadCounts: Record<string, number> = {};
+let globalUnreadCount = 0;
+
+// Precargar sonidos y assets
+const notificationAudio = new Audio();
+notificationAudio.src = new URL('./assets/notify.mp3', import.meta.url).href;
+notificationAudio.volume = 0.6;
+
+const loginAudio = new Audio();
+loginAudio.src = new URL('./assets/login.mp3', import.meta.url).href;
+loginAudio.volume = 0.7;
+
+const logoUrl = new URL('./assets/logo.png', import.meta.url).href;
 
 const getEl = (id: string) => document.getElementById(id);
 
@@ -90,9 +107,7 @@ function conectarAlServidor(ip: string, pass: string) {
     };
 
     socket.onmessage = (event) => {
-        console.log("RAW WS MSG:", event.data);
         const msg = JSON.parse(event.data);
-        console.log("PARSED MSG TYPE:", msg.type);
         switch (msg.type) {
             case 'auth':
                 if (msg.status === 'success') {
@@ -118,14 +133,21 @@ function conectarAlServidor(ip: string, pass: string) {
                 break;
 
             case 'history':
-                console.log(`Recibido historial de ${msg.data.length} mensajes para sala.`);
                 const chatBox = getEl('chat-box');
                 if (chatBox) {
                     chatBox.innerHTML = "";
                     lastDateDisplayed = null;
                     oldestTimestamp = null;
                     hasMoreMessages = true;
-                    msg.data.forEach((m: any) => {
+                    
+                    // Asegurar que los mensajes están ordenados cronológicamente
+                    const sortedHistory = msg.data.sort((a: any, b: any) => {
+                        const timeA = new Date(a.timestamp).getTime();
+                        const timeB = new Date(b.timestamp).getTime();
+                        return timeA - timeB;
+                    });
+
+                    sortedHistory.forEach((m: any) => {
                         try {
                             renderizarMensaje(m.user, m.text, m.timestamp);
                             if (!oldestTimestamp || m.timestamp < oldestTimestamp) {
@@ -157,8 +179,14 @@ function conectarAlServidor(ip: string, pass: string) {
                         // Crear fragmento con mensajes antiguos
                         const fragment = document.createDocumentFragment();
                         const tempContainer = document.createElement('div');
+                        // Asegurar que los mensajes antiguos están ordenados chronológicamente antes de insertarlos
+                        const sortedOlder = msg.data.sort((a: any, b: any) => {
+                            const timeA = new Date(a.timestamp).getTime();
+                            const timeB = new Date(b.timestamp).getTime();
+                            return timeA - timeB; // De más antiguo a más nuevo
+                        });
 
-                        msg.data.forEach((m: any) => {
+                        sortedOlder.forEach((m: any) => {
                             try {
                                 renderizarMensajeEn(tempContainer, m.user, m.text, m.timestamp);
                                 if (!oldestTimestamp || m.timestamp < oldestTimestamp) {
@@ -189,7 +217,6 @@ function conectarAlServidor(ip: string, pass: string) {
                 break;
 
             case 'chat':
-                console.log("[DEBUG] CHAT RECIBIDO:", msg, "currentRoom:", currentRoom);
                 const targetRoom = msg.room || currentRoom; // Respaldo si el servidor no ha sido reiniciado
                 if (targetRoom === currentRoom) {
                     // Mensaje en la sala actual: renderizar
@@ -199,6 +226,11 @@ function conectarAlServidor(ip: string, pass: string) {
                     // Mensaje en otra sala: notificación
                     incrementBadge(targetRoom, msg.user, msg.text);
                 }
+                break;
+
+            case 'private_chat':
+                renderizarMensajePrivado(msg.user, msg.to, msg.text, msg.timestamp);
+                scrollToBottom();
                 break;
 
             case 'rooms_list':
@@ -251,8 +283,10 @@ function conectarAlServidor(ip: string, pass: string) {
                 }
                 break;
 
-            case 'info':
-                console.info("Server Info:", msg.message);
+                break;
+
+            case 'online_users':
+                actualizarListaUsuariosOnline(msg.users);
                 break;
 
         }
@@ -261,8 +295,17 @@ function conectarAlServidor(ip: string, pass: string) {
 
 // --- Renderizado e Interfaz ---
 
+// Devuelve el nombre de la clase CSS en lugar del color Hex inline para evitar bloqueos CSP en macOS WebKit
+function getUserColor(username: string): string {
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+        hash = (hash * 31 + username.charCodeAt(i)) % 1000000;
+    }
+    const colorIndex = Math.abs(hash) % 14; // Tenemos 14 colores definidos en styles.css
+    return `user-color-${colorIndex}`;
+}
+
 function renderizarMensaje(usuario: string, texto: string, timestamp?: any) {
-    console.log(`[RENDER] Iniciando render para: User=${usuario}, Text=${texto?.substring(0, 15)}...`);
     try {
         const chatBox = getEl('chat-box');
         if (!chatBox) {
@@ -294,12 +337,21 @@ function renderizarMensaje(usuario: string, texto: string, timestamp?: any) {
             lastDateDisplayed = fechaLegible;
         }
 
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message msg-new';
-        const colorUser = (usuario === currentUser) ? 'var(--border-color)' : 'var(--accent)';
+        let baseClassName = 'message msg-new';
+        if (usuario === 'Server' || usuario === 'system') {
+            baseClassName += ' msg-server';
+        }
+        let safeText = String(texto || "");
+        
+        // Detectar si es mensaje destacado
+        if (safeText.startsWith('/! ')) {
+            baseClassName += ' msg-important';
+            safeText = safeText.substring(3);
+        }
 
-        // Linkify puede fallar si el texto no es string o tiene cosas raras
-        const safeText = String(texto || "");
+        const msgDiv = document.createElement('div');
+        msgDiv.className = baseClassName;
+
         let htmlTexto = safeText;
         try {
             htmlTexto = linkify(safeText);
@@ -307,9 +359,33 @@ function renderizarMensaje(usuario: string, texto: string, timestamp?: any) {
             console.error("Error en linkify:", e);
         }
 
+        // --- MENCIONES ---
+        const mentionRegex = /(^|\s)@(\w+)/g;
+        const isMentioned = currentUser && new RegExp(`(^|\\s)@${currentUser}\\b`, 'i').test(safeText);
+        htmlTexto = htmlTexto.replace(mentionRegex, '$1<span class="mention">@$2</span>');
+
+        // Notificación de mención / Sonido
+        const diffMs = new Date().getTime() - fechaMensaje.getTime();
+        const isNewMessage = isNaN(diffMs) || diffMs < 10000;
+        
+        if (isNewMessage && usuario !== currentUser) {
+            // Sonar SIEMPRE en mención (independientemente del foco)
+            if (isMentioned) {
+                reproducirSonidoNotificacion();
+                notify(`Mención de #${usuario}`, safeText);
+            } else if (!document.hasFocus()) {
+                // Si la app está en segundo plano, sonar y contar
+                reproducirSonidoNotificacion();
+                globalUnreadCount++;
+                actualizarBadgeApp();
+            }
+        }
+
+        const colorClass = (usuario === currentUser) ? 'user-color-self' : getUserColor(usuario);
+
         msgDiv.innerHTML = `
             <span class="time">[${hora}]</span> 
-            <span class="user" style="color: ${colorUser}">#${usuario}:</span> 
+            <span class="user ${colorClass}">#${usuario}:</span> 
             <span class="text">${htmlTexto}</span>
         `;
         chatBox.appendChild(msgDiv);
@@ -340,11 +416,21 @@ function renderizarMensajeEn(container: HTMLElement, usuario: string, texto: str
             lastDateDisplayed = fechaLegible;
         }
 
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message';
-        const colorUser = (usuario === currentUser) ? 'var(--border-color)' : 'var(--accent)';
+        let baseClassName = 'message';
+        if (usuario === 'Server' || usuario === 'system') {
+            baseClassName += ' msg-server';
+        }
+        let safeText = String(texto || "");
+        
+        // Detectar si es mensaje destacado
+        if (safeText.startsWith('/! ')) {
+            baseClassName += ' msg-important';
+            safeText = safeText.substring(3);
+        }
 
-        const safeText = String(texto || "");
+        const msgDiv = document.createElement('div');
+        msgDiv.className = baseClassName;
+
         let htmlTexto = safeText;
         try {
             htmlTexto = linkify(safeText);
@@ -352,14 +438,109 @@ function renderizarMensajeEn(container: HTMLElement, usuario: string, texto: str
             console.error("Error en linkify:", e);
         }
 
+        // --- MENCIONES ---
+        const mentionRegex = /(^|\s)@(\w+)/g;
+        htmlTexto = htmlTexto.replace(mentionRegex, '$1<span class="mention">@$2</span>');
+
+        const colorClass = (usuario === currentUser) ? 'user-color-self' : getUserColor(usuario);
+
         msgDiv.innerHTML = `
             <span class="time">[${hora}]</span> 
-            <span class="user" style="color: ${colorUser}">#${usuario}:</span> 
+            <span class="user ${colorClass}">#${usuario}:</span> 
             <span class="text">${htmlTexto}</span>
         `;
         container.appendChild(msgDiv);
     } catch (error) {
         console.error("Error en renderizarMensajeEn:", error);
+    }
+}
+
+function renderizarMensajePrivado(fromUser: string, toUser: string, texto: string, timestamp?: any) {
+    try {
+        const chatBox = getEl('chat-box');
+        if (!chatBox) return;
+
+        const fechaMensaje = timestamp ? new Date(timestamp) : new Date();
+        const hora = !isNaN(fechaMensaje.getTime())
+            ? fechaMensaje.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+            : "--:--:--";
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message msg-new msg-private';
+        
+        const labelStr = (fromUser === currentUser) ? `Privado a #${toUser}` : `Privado de #${fromUser}`;
+        
+        let safeText = String(texto || "");
+        let htmlTexto = safeText;
+        try { htmlTexto = linkify(safeText); } catch(e){}
+
+        // --- MENCIONES ---
+        const mentionRegex = /(^|\s)@(\w+)/g;
+        htmlTexto = htmlTexto.replace(mentionRegex, '$1<span class="mention">@$2</span>');
+
+        // Notification for private message (if it's new and not from us)
+        const diffMs = new Date().getTime() - fechaMensaje.getTime();
+        const isNewMessage = isNaN(diffMs) || diffMs < 10000;
+        if (isNewMessage && fromUser !== currentUser) {
+            reproducirSonidoNotificacion();
+            if (!document.hasFocus()) {
+                globalUnreadCount++;
+                actualizarBadgeApp();
+            }
+            notify('Mensaje Privado', `De #${fromUser}: ${safeText}`);
+        }
+
+        msgDiv.innerHTML = `
+            <span class="time">[${hora}]</span> 
+            <span class="user-private">[${labelStr}]:</span> 
+            <span class="text">${htmlTexto}</span>
+        `;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } catch(e) { console.error(e); }
+}
+
+// --- SISTEMA DE NOTIFICACIONES ---
+// Web Notification API estándar: funciona en browser y en Tauri WKWebView
+async function notify(title: string, body: string) {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+        new Notification(title, { body, icon: logoUrl });
+    } else if (Notification.permission === "default") {
+        const p = await Notification.requestPermission();
+        if (p === "granted") new Notification(title, { body, icon: logoUrl });
+    }
+}
+
+function reproducirSonidoNotificacion() {
+    try {
+        // En WKWebView, cloneNode().play() a veces es bloqueado si no es acción directa del usuario
+        // Intentar usar el nodo original primero si está pausado
+        if (notificationAudio.paused) {
+            notificationAudio.currentTime = 0;
+            notificationAudio.play().catch(e => console.warn("[Audio] Error al reproducir original:", e));
+        } else {
+            // Si ya está sonando, intentamos el clon pero con catch visible
+            const clone = notificationAudio.cloneNode() as HTMLAudioElement;
+            clone.volume = 0.6;
+            clone.play().catch(e => console.warn("[Audio] Error al reproducir clon (posible autoplay block):", e));
+        }
+    } catch (err) {
+        console.error("[Audio] Fallo general al reproducir sonido:", err);
+    }
+}
+
+async function actualizarBadgeApp() {
+    // Actualizar el título de la ventana como indicador visual de mensajes no leídos
+    document.title = globalUnreadCount > 0 ? `(•${globalUnreadCount}) HYPR-CHAT` : 'HYPR-CHAT';
+
+    try {
+        await invoke('set_app_badge', { count: globalUnreadCount });
+    } catch (e) {
+        // Mostramos el error en UI para diagnosticar qué pasa en la app compilada
+        console.error("Error setting badge via Rust:", e);
+        // Descomentar si necesitamos ver el alert en pantalla
+        // alert("Fallo al actualizar el icono rojo del Dock: " + String(e));
     }
 }
 
@@ -376,27 +557,32 @@ function añadirSalaVisual(nombre: string, locked: boolean = false) {
         if (nombre === currentRoom) li.classList.add('active');
 
         lista.appendChild(li);
-        
+
         // Renderizar badge si hay notificaciones pendientes para esta sala nueva
         actualizarBadgeVisual(nombre);
     }
 }
 
 // --- Notificaciones y Badges ---
-function incrementBadge(room: string, sender: string, text: string) {
+async function incrementBadge(room: string, sender: string, text: string) {
     if (!unreadCounts[room]) unreadCounts[room] = 0;
     unreadCounts[room]++;
     actualizarBadgeVisual(room);
 
-    // Notificación Push (HTML5)
-    if (Notification.permission === 'granted') {
-        new Notification(`Mensaje en #${room}`, { body: `#${sender}: ${text}` });
-    } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                new Notification(`Mensaje en #${room}`, { body: `#${sender}: ${text}` });
-            }
-        });
+    // Si no tenemos el foco, incrementamos el contador global para el badge del dock
+    if (!document.hasFocus()) {
+        globalUnreadCount++;
+        actualizarBadgeApp();
+    }
+
+    // Reproducir sonido siempre que nos llega un mensaje de otra sala
+    reproducirSonidoNotificacion();
+
+    // Notificación Push nativa de Tauri / Navegador
+    try {
+        notify(`Mensaje en #${room}`, `#${sender}: ${text}`);
+    } catch (e) {
+        console.warn("Error al disparar notificación:", e);
     }
 }
 
@@ -430,18 +616,86 @@ function cambiarSala(nuevaSala: string, password?: string) {
     oldestTimestamp = null;
     isLoadingMore = false;
     hasMoreMessages = true;
-    
+
     clearBadge(nuevaSala); // Limpiar notificaciones al entrar
-    
+
     getEl('current-room-display')!.textContent = nuevaSala;
     document.querySelectorAll('.room-item').forEach(el => el.classList.toggle('active', el.getAttribute('data-room') === nuevaSala));
     getEl('chat-box')!.innerHTML = "";
     socket.send(JSON.stringify({ type: 'join', room: currentRoom, password }));
 }
 
+// --- Usuarios Online ---
+function actualizarListaUsuariosOnline(users: string[]) {
+    const actCount = document.getElementById('online-count-modal');
+    const actCountHeader = document.getElementById('online-count-header');
+    const actList = document.getElementById('online-users-list-modal');
+    
+    if (actCount) actCount.textContent = users.length.toString();
+    if (actCountHeader) actCountHeader.textContent = users.length.toString();
+    
+    if (actList) {
+        actList.innerHTML = '';
+        if (users.length === 0) {
+            const li = document.createElement('li');
+            li.textContent = "Nadie online";
+            li.style.color = "var(--text-dim)";
+            actList.appendChild(li);
+        } else {
+            users.forEach(u => {
+                const li = document.createElement('li');
+                li.textContent = u;
+                // Aplicar la clase de color correspondiente
+                const colorClass = (u === currentUser) ? 'user-color-self' : getUserColor(u);
+                li.classList.add(colorClass);
+                li.style.fontWeight = "bold";
+                li.style.padding = "4px 0";
+                
+                if (u === currentUser) {
+                    li.textContent += " (Tú)";
+                }
+                actList.appendChild(li);
+            });
+        }
+    }
+}
+
+// Configurar botón movido a window.onload para asegurar consistencia
+
+
 function mostrarChat() {
     const loginScreen = getEl('login-screen')!;
     const chatContainer = getEl('chat-container')!;
+
+    // 0. Reproducir sonido de login con fade-out
+    try {
+        const loginSound = loginAudio.cloneNode() as HTMLAudioElement;
+        const initialVolume = 0.7;
+        loginSound.src = loginAudio.src;
+        loginSound.volume = initialVolume;
+
+        loginSound.play().then(() => {
+            // Empezar a hacer fade out a los 2 segundos (2000 ms)
+            setTimeout(() => {
+                const fadeDuration = 1000; // El fade dura 1 segundo (1000 ms)
+                const steps = 20; // 20 pasos de reducción
+                const stepTime = fadeDuration / steps;
+                const volumeStep = initialVolume / steps;
+
+                const fadeInterval = setInterval(() => {
+                    if (loginSound.volume - volumeStep > 0) {
+                        loginSound.volume -= volumeStep;
+                    } else {
+                        loginSound.volume = 0;
+                        loginSound.pause(); // Detenemos el audio
+                        clearInterval(fadeInterval);
+                    }
+                }, stepTime);
+            }, 700); // 2 segundos de espera
+        }).catch(e => console.warn("No se pudo reproducir el sonido", e));
+    } catch (e) {
+        console.error("Error al inicializar el audio:", e);
+    }
 
     // 1. Animar salida del login
     loginScreen.classList.add('login-exit');
@@ -465,7 +719,16 @@ function mostrarChat() {
         cambiarSala("general");
 
         // 3. Limpiar clase después de la animación
-        setTimeout(() => chatContainer.classList.remove('chat-enter'), 600);
+        setTimeout(() => {
+            chatContainer.classList.remove('chat-enter');
+        }, 600);
+
+        // 4. Pedir permisos de notificación al entrar al chat
+        setTimeout(async () => {
+            if ("Notification" in window && Notification.permission === "default") {
+                await Notification.requestPermission();
+            }
+        }, 800);
     }, 400);
 }
 
@@ -475,7 +738,12 @@ window.onload = () => {
     initSettings();
     loadInitialData();
 
+    // 6. ONLINE USERS DROPDOWN — manejado directamente en el atributo onclick del HTML
+
+
+
     // Scroll listener para cargar mensajes antiguos
+
     getEl('chat-box')?.addEventListener('scroll', () => {
         const chatBox = getEl('chat-box');
         if (!chatBox || isLoadingMore || !hasMoreMessages || !oldestTimestamp || !socket) return;
@@ -550,6 +818,11 @@ window.onload = () => {
         tempIp = ipEl.value.trim().includes(' | ') ? ipEl.value.split(' | ')[1].trim() : ipEl.value.trim();
         tempAlias = aliasEl.value.trim();
 
+        // Pedir permisos de notificación al hacer clic
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+
         if (currentUser && tempIp) conectarAlServidor(tempIp, passEl.value);
     });
 
@@ -557,7 +830,19 @@ window.onload = () => {
     getEl('message-input')?.addEventListener('keydown', (e) => {
         const input = e.target as HTMLInputElement;
         if (e.key === 'Enter' && input.value.trim() !== "") {
-            socket?.send(JSON.stringify({ type: 'chat', user: currentUser, text: input.value.trim(), room: currentRoom }));
+            const rawText = input.value.trim();
+            if (rawText.startsWith('/w ') || rawText.startsWith('/msg ')) {
+                const parts = rawText.split(' ');
+                if (parts.length >= 3) {
+                    const toUser = parts[1];
+                    const msgText = parts.slice(2).join(' ');
+                    socket?.send(JSON.stringify({ type: 'private_chat', user: currentUser, to: toUser, text: msgText }));
+                } else {
+                    alert("Uso: /w usuario mensaje");
+                }
+            } else {
+                socket?.send(JSON.stringify({ type: 'chat', user: currentUser, text: rawText, room: currentRoom }));
+            }
             input.value = "";
         }
     });
@@ -782,8 +1067,31 @@ window.onload = () => {
         }
     });
 
-    // 7. CERRAR SESIÓN
+    // 7. CERRAR SESIÓN e INTERACCIÓN DE FOCO
     getEl('logout-btn')?.addEventListener('click', () => location.reload());
+
+    const resetGlobalBadge = () => {
+        if (globalUnreadCount > 0) {
+            globalUnreadCount = 0;
+            actualizarBadgeApp();
+        }
+    };
+
+    // 8. PANEL DE USUARIOS ONLINE
+    const onlinePanel = getEl('online-users-panel');
+    const openOnlineBtn = getEl('open-online-btn');
+    const closeOnlineBtn = getEl('close-online');
+
+    openOnlineBtn?.addEventListener('click', () => {
+        onlinePanel?.classList.remove('hidden');
+    });
+
+    closeOnlineBtn?.addEventListener('click', () => {
+        onlinePanel?.classList.add('hidden');
+    });
+
+    window.addEventListener('focus', resetGlobalBadge);
+    window.addEventListener('click', resetGlobalBadge);
 };
 
 //Fin de window.onload --------------------------------
